@@ -1,79 +1,54 @@
-This project was bootstrapped with [Create Contentful App](https://github.com/contentful/create-contentful-app).
+# Migration Frontend App Example
 
-## How to use
+This is a Contentful Page App frontend for managing and visualizing migration progress, designed to work with a simple Express backend. It was bootstrapped with [Create Contentful App](https://github.com/contentful/create-contentful-app).
 
-Execute create-contentful-app with npm, npx or yarn to bootstrap the example:
+## Overview
 
-```bash
-# npx
-npx create-contentful-app --typescript
+This app lets you:
 
-# npm
-npm init contentful-app -- --typescript
+- Start a migration process (simulated via backend)
+- See live migration status and history
+- Prevent starting a new migration until the current one completes
+- Leave and return to the page and see migration progress (state is persisted)
 
-# Yarn
-yarn create contentful-app --typescript
-```
+## Architecture
 
-## Available Scripts
+- **Frontend:** React + Forma 36, runs as a Contentful Page App
+- **Backend:** Express server (see `migration-app-example`), simulates migration jobs and exposes endpoints for starting and polling migration status
 
-In the project directory, you can run:
+## Local Development
 
-#### `npm start`
+1. **Start the backend:**
 
-Creates or updates your app definition in Contentful, and runs the app in development mode.
-Open your app to view it in the browser.
+   - Go to `migration-app-example`
+   - Run `npm install` and `npm start` (default port: 3000)
 
-The page will reload if you make edits.
-You will also see any lint errors in the console.
+2. **Start the frontend:**
 
-#### `npm run build`
+   - Go to `migration-frontend-app`
+   - Run `npm install` and `npm start` (default port: 3333)
 
-Builds the app for production to the `build` folder.
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. **Configure Contentful App:**
+   - Register the frontend as a Page App in Contentful
+   - Set the backend URL in the frontend code if needed (default: `http://localhost:3000`)
 
-The build is minified and the filenames include the hashes.
-Your app is ready to be deployed!
+## Features
 
-#### `npm run upload`
+- **Start Migration:** Button triggers a backend job, disables until migration completes
+- **Polling:** UI polls backend for migration status every 3 seconds
+- **History:** Shows all migrations, with status, timestamps, and duration
+- **Persistence:** Migration state is saved in localStorage so users can leave and return
+- **Responsive UI:** Two-column layout, migration history is a vertical list
 
-Uploads the build folder to contentful and creates a bundle that is automatically activated.
-The command guides you through the deployment process and asks for all required arguments.
-Read [here](https://www.contentful.com/developers/docs/extensibility/app-framework/create-contentful-app/#deploy-with-contentful) for more information about the deployment process.
+## Environment Variables
 
-#### `npm run upload-ci`
+For backend request verification, set `CONTENTFUL_APP_SECRET` in `.env` in `migration-app-example`.
 
-Similar to `npm run upload` it will upload your app to contentful and activate it. The only difference is  
-that with this command all required arguments are read from the environment variables, for example when you add
-the upload command to your CI pipeline.
-
-For this command to work, the following environment variables must be set:
-
-- `CONTENTFUL_ORG_ID` - The ID of your organization
-- `CONTENTFUL_APP_DEF_ID` - The ID of the app to which to add the bundle
-- `CONTENTFUL_ACCESS_TOKEN` - A personal [access token](https://www.contentful.com/developers/docs/references/content-management-api/#/reference/personal-access-tokens)
-
-## Libraries to use
-
-To make your app look and feel like Contentful use the following libraries:
+## Libraries
 
 - [Forma 36](https://f36.contentful.com/) – Contentful's design system
 - [Contentful Field Editors](https://www.contentful.com/developers/docs/extensibility/field-editors/) – Contentful's field editor React components
 
-## Using the `contentful-management` SDK
-
-In the default create contentful app output, a contentful management client is
-passed into each location. This can be used to interact with Contentful's
-management API. For example
-
-```js
-// Use the client
-cma.locale.getMany({}).then((locales) => console.log(locales));
-```
-
-Visit the [`contentful-management` documentation](https://www.contentful.com/developers/docs/extensibility/app-framework/sdk/#using-the-contentful-management-library)
-to find out more.
-
 ## Learn More
 
-[Read more](https://www.contentful.com/developers/docs/extensibility/app-framework/create-contentful-app/) and check out the video on how to use the CLI.
+- [Contentful App Framework Docs](https://www.contentful.com/developers/docs/extensibility/app-framework/create-contentful-app/)
