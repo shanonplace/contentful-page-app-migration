@@ -27,7 +27,7 @@ const Page = () => {
   const cma = useCMA();
 
   const [migrations, setMigrations] = useState<Migration[]>([]);
-  const [backendUrl, setBackendUrl] = useState("http://localhost:3000");
+  const [backendUrl, setBackendUrl] = useState("http://localhost:3000"); // Move this to an installation parameter or config in production
   const [isStarting, setIsStarting] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -127,6 +127,7 @@ const Page = () => {
     }
   };
 
+  // Does the polling for migration status
   const checkMigrationStatus = async (migrationId: string) => {
     try {
       const signedRequest = await cma.appSignedRequest.create(
@@ -256,7 +257,6 @@ const Page = () => {
           <Card style={{ flex: "0 0 400px" }}>
             <Stack spacing="spacingM">
               <Heading as="h2">Start Migration</Heading>
-              <Text>Click to start a new migration process.</Text>
 
               <Button
                 variant="primary"
