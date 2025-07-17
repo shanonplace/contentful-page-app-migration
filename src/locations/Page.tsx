@@ -30,9 +30,65 @@ const Page = () => {
   const [backendUrl, setBackendUrl] = useState("http://localhost:3000");
   const [isStarting, setIsStarting] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check if there are any active migrations
   const hasActiveMigrations = migrations.some((m) => m.status === "started");
+
+  // Local storage keys
+  const STORAGE_KEY = "contentful-migration-app";
+
+  // Save migrations to local storage
+  const saveMigrationsToStorage = (migrationsToSave: Migration[]) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrationsToSave));
+    } catch (error) {
+      console.error("Failed to save migrations to localStorage:", error);
+    }
+  };
+
+  // Load migrations from local storage
+  const loadMigrationsFromStorage = (): Migration[] => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Failed to load migrations from localStorage:", error);
+      return [];
+    }
+  };
+
+  // Load stored migrations and check status on component mount
+  useEffect(() => {
+    const initializeMigrations = async () => {
+      const storedMigrations = loadMigrationsFromStorage();
+      setMigrations(storedMigrations);
+
+      // Check status of any stored "started" migrations
+      const activeMigrations = storedMigrations.filter(
+        (m) => m.status === "started"
+      );
+      if (activeMigrations.length > 0) {
+        console.log(
+          `Found ${activeMigrations.length} active migration(s), checking status...`
+        );
+        for (const migration of activeMigrations) {
+          await checkMigrationStatus(migration.migrationId);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    initializeMigrations();
+  }, []);
+
+  // Save migrations to storage whenever they change
+  useEffect(() => {
+    if (!isLoading) {
+      saveMigrationsToStorage(migrations);
+    }
+  }, [migrations, isLoading]);
 
   const startMigration = async () => {
     setIsStarting(true);
@@ -164,10 +220,25 @@ const Page = () => {
 
   return (
     <div style={{ padding: "0 2rem" }}>
-      <Stack spacing="spacingL">
-        <div style={{ textAlign: "center" }}>
-          <Heading>Migration Management</Heading>
-          {isPolling && (
+      <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+        <Heading>Migration Management</Heading>
+        {isPolling && (
+          <Text fontSize="fontSizeS" fontColor="gray600">
+            <Flex
+              justifyContent="center"
+              alignItems="center"
+              style={{ gap: "0.5rem" }}
+            >
+              <Spinner size="small" />
+              Checking migration status...
+            </Flex>
+          </Text>
+        )}
+      </div>
+
+      {isLoading ? (
+        <Stack spacing="spacingL">
+          <div style={{ textAlign: "center" }}>
             <Text fontSize="fontSizeS" fontColor="gray600">
               <Flex
                 justifyContent="center"
@@ -175,77 +246,124 @@ const Page = () => {
                 style={{ gap: "0.5rem" }}
               >
                 <Spinner size="small" />
-                Checking migration status...
+                Loading migration status...
               </Flex>
             </Text>
-          )}
-        </div>
+          </div>
+        </Stack>
+      ) : (
+        <div style={{ display: "flex", gap: "2rem", alignItems: "flex-start" }}>
+          <Card style={{ flex: "0 0 400px" }}>
+            <Stack spacing="spacingM">
+              <Heading as="h2">Start Migration</Heading>
+              <Text>Click to start a new migration process.</Text>
 
-        <Card>
-          <Stack spacing="spacingM">
-            <Heading as="h2">Start Migration</Heading>
-            <Text>Click to start a new migration process.</Text>
+              <Button
+                variant="primary"
+                onClick={startMigration}
+                isDisabled={isStarting || hasActiveMigrations}
+              >
+                {isStarting
+                  ? "Starting..."
+                  : hasActiveMigrations
+                  ? "Migration in Progress..."
+                  : "Start Migration"}
+              </Button>
+            </Stack>
+          </Card>
 
-            <Button
-              variant="primary"
-              onClick={startMigration}
-              isDisabled={isStarting || hasActiveMigrations}
-            >
-              {isStarting
-                ? "Starting..."
-                : hasActiveMigrations
-                ? "Migration in Progress..."
-                : "Start Migration"}
-            </Button>
-          </Stack>
-        </Card>
-
-        <Card>
-          <Stack spacing="spacingM">
-            <Heading as="h2">Migration History</Heading>
-            {migrations.length === 0 ? (
-              <Note>No migrations started yet.</Note>
-            ) : (
-              <Stack spacing="spacingS">
-                {migrations.map((migration) => (
-                  <Card key={migration.migrationId}>
-                    <Flex justifyContent="space-between" alignItems="center">
-                      <Stack spacing="spacingXs">
+          <Card style={{ flex: "1" }}>
+            <div>
+              <Heading as="h2" style={{ marginBottom: "1rem" }}>
+                Migration History
+              </Heading>
+              {migrations.length === 0 ? (
+                <Note>No migrations started yet.</Note>
+              ) : (
+                <div>
+                  {migrations.map((migration, index) => (
+                    <div
+                      key={migration.migrationId}
+                      style={{
+                        marginBottom:
+                          index < migrations.length - 1 ? "1.5rem" : "0",
+                        borderBottom:
+                          index < migrations.length - 1
+                            ? "1px solid #e5e5e5"
+                            : "none",
+                        paddingBottom:
+                          index < migrations.length - 1 ? "1rem" : "0",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
                         <Text fontWeight="fontWeightMedium">
-                          ID: {migration.migrationId}
+                          Migration ID: {migration.migrationId}
                         </Text>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          {getStatusIcon(migration.status)}
+                          <Badge variant={getStatusColor(migration.status)}>
+                            {migration.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div>
                         {migration.startedAt && (
-                          <Text fontSize="fontSizeS" fontColor="gray600">
+                          <Text
+                            fontSize="fontSizeS"
+                            fontColor="gray600"
+                            style={{
+                              display: "block",
+                              marginBottom: "0.25rem",
+                            }}
+                          >
                             Started:{" "}
                             {new Date(migration.startedAt).toLocaleString()}
                           </Text>
                         )}
                         {migration.completedAt && (
-                          <Text fontSize="fontSizeS" fontColor="gray600">
+                          <Text
+                            fontSize="fontSizeS"
+                            fontColor="gray600"
+                            style={{
+                              display: "block",
+                              marginBottom: "0.25rem",
+                            }}
+                          >
                             Completed:{" "}
                             {new Date(migration.completedAt).toLocaleString()}
                           </Text>
                         )}
                         {migration.duration && (
-                          <Text fontSize="fontSizeS" fontColor="gray600">
+                          <Text
+                            fontSize="fontSizeS"
+                            fontColor="gray600"
+                            style={{ display: "block" }}
+                          >
                             Duration: {(migration.duration / 1000).toFixed(1)}s
                           </Text>
                         )}
-                      </Stack>
-                      <Flex alignItems="center" style={{ gap: "0.5rem" }}>
-                        {getStatusIcon(migration.status)}
-                        <Badge variant={getStatusColor(migration.status)}>
-                          {migration.status.toUpperCase()}
-                        </Badge>
-                      </Flex>
-                    </Flex>
-                  </Card>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </Card>
-      </Stack>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
