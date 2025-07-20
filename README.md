@@ -39,10 +39,54 @@ This app lets you:
 - **History:** Shows all migrations, with status, timestamps, and duration
 - **Persistence:** Migration state is saved in localStorage so users can leave and return
 - **Responsive UI:** Two-column layout, migration history is a vertical list
+- **Secure Communication:** Uses Contentful's request verification to authenticate with the backend
 
 ## Environment Variables
 
 For backend request verification, set `CONTENTFUL_APP_SECRET` in `.env` in `migration-app-example`.
+
+## Request Verification & Security
+
+This app uses Contentful's built-in request verification to securely communicate with the backend:
+
+### Frontend Implementation
+
+The frontend uses the Contentful Management API's `appSignedRequest.create()` method to generate signed requests:
+
+```typescript
+const signedRequest = await cma.appSignedRequest.create(
+  { appDefinitionId: sdk.ids.app },
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+    path: "/start-migration",
+  }
+);
+
+const response = await fetch(`${backendUrl}/start-migration`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    ...signedRequest.additionalHeaders, // Contains verification headers
+  },
+  body: JSON.stringify({}),
+});
+```
+
+### What Gets Signed
+
+The signed request includes these verification headers:
+
+- `X-Contentful-Signature`: HMAC signature of the request
+- `X-Contentful-Signed-Headers`: List of headers included in signature
+- `X-Contentful-Timestamp`: Request timestamp
+- `X-Contentful-CRN`: Contentful Resource Name for the app
+- Additional context headers (Space ID, Environment ID, User ID, etc.)
+
+### Backend Verification
+
+The backend validates these headers using `@contentful/node-apps-toolkit` and the shared app secret, ensuring requests truly originate from your authorized Contentful app.
 
 ## Libraries
 
